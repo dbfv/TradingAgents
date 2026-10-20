@@ -6,6 +6,7 @@ from tradingagents.dataflows.errors import (
     VendorNotConfiguredError,
     VendorUnavailableError,
 )
+from tradingagents.dataflows.ohlcv import fallback_vendor_chain, market_vendor_chain
 from tradingagents.dataflows.vendors.alpha_vantage import (
     get_balance_sheet as get_alpha_vantage_balance_sheet,
     get_cashflow as get_alpha_vantage_cashflow,
@@ -17,6 +18,7 @@ from tradingagents.dataflows.vendors.alpha_vantage import (
     get_news as get_alpha_vantage_news,
     get_stock as get_alpha_vantage_stock,
 )
+from tradingagents.dataflows.vendors.dnse.market import get_DNSE_data_online
 from tradingagents.dataflows.vendors.fred import get_macro_data as get_fred_macro_data
 from tradingagents.dataflows.vendors.polymarket import (
     get_prediction_markets as get_polymarket_prediction_markets,
@@ -99,11 +101,20 @@ VENDOR_METHODS = {
     "get_stock_data": {
         "alpha_vantage": get_alpha_vantage_stock,
         "yfinance": get_YFin_data_online,
+        # The Vietnamese exchange's own API. It serves Vietnamese listings that
+        # Yahoo carries only under a ".VN" suffix, and its history is complete
+        # where Yahoo's is not.
+        "dnse": get_DNSE_data_online,
     },
     # technical_indicators
     "get_indicators": {
         "alpha_vantage": get_alpha_vantage_indicator,
         "yfinance": get_stock_stats_indicators_window,
+        # The same computation, over the prices of the market that serves the
+        # symbol (see tradingagents.dataflows.ohlcv). It is registered under
+        # the DNSE vendor so the routing of a Vietnamese listing says DNSE,
+        # which is where its prices come from.
+        "dnse": get_stock_stats_indicators_window,
     },
     # fundamental_data
     "get_fundamentals": {
@@ -197,6 +208,17 @@ def no_data_available(error: NoMarketDataError) -> str:
     )
 
 
+def _method_symbol(method: str, args: tuple) -> str | None:
+    """The symbol a call is about, when the method takes one first.
+
+    Every symbol-scoped method here takes the symbol as its first argument.
+    """
+    if not args:
+        return None
+    candidate = args[0]
+    return candidate if isinstance(candidate, str) and candidate.strip() else None
+
+
 def route_to_vendor(method: str, *args, **kwargs):
     """Route method calls to appropriate vendor implementation with fallback support."""
     category = get_category_for_method(method)
@@ -223,6 +245,18 @@ def route_to_vendor(method: str, *args, **kwargs):
             )
     else:
         vendor_chain = all_available_vendors
+
+    # A symbol's market decides which vendor can serve it: the Vietnamese
+    # exchange's own API is first for a ".VN" listing, because Yahoo carries
+    # those only under that suffix and its history is incomplete. The rule is
+    # explicit configuration ("market_vendors"), not a silent re-route, and the
+    # configured chain still follows it, so a symbol the rule does not cover
+    # keeps exactly the chain it had.
+    symbol = _method_symbol(method, args)
+    if symbol:
+        market_chain = market_vendor_chain(symbol, method)
+        if market_chain and market_chain != vendor_chain:
+            vendor_chain = market_chain + [v for v in vendor_chain if v not in market_chain]
 
     last_no_data: NoMarketDataError | None = None
     last_unavailable: VendorUnavailableError | None = None
@@ -257,6 +291,39 @@ def route_to_vendor(method: str, *args, **kwargs):
                 first_error = e
             failed = e
             continue
+
+    # Every configured vendor says it has no data for this symbol. The
+    # fallback vendors run only now: they exist for the symbol the configured
+    # vendors do not carry (a bare Vietnamese ticker is a 404 at Yahoo), and
+    # they must not run before the configured ones, or they would answer for a
+    # symbol the user asked another vendor for.
+    if symbol and last_no_data is not None and last_unavailable is None and failed is None:
+        for vendor in fallback_vendor_chain(symbol, method):
+            if vendor not in VENDOR_METHODS[method]:
+                continue
+            vendor_impl = VENDOR_METHODS[method][vendor]
+            impl_func = vendor_impl[0] if isinstance(vendor_impl, list) else vendor_impl
+            logger.info(
+                "Trying fallback vendor %r for %s: no configured vendor has it.", vendor, symbol
+            )
+            try:
+                return impl_func(*args, **kwargs)
+            except VendorUnavailableError as e:
+                last_unavailable = e
+                continue
+            except VendorNotConfiguredError as e:
+                if first_error is None:
+                    first_error = e
+                continue
+            except NoMarketDataError as e:
+                last_no_data = e
+                continue
+            except Exception as e:  # noqa: BLE001 - one fallback failing is not fatal
+                logger.warning("Fallback vendor %r failed for %s: %s", vendor, method, e)
+                if first_error is None:
+                    first_error = e
+                failed = e
+                continue
 
     # A vendor that throttled or failed the request never said whether it has
     # the symbol, so no other vendor's "no data" can speak for the whole chain:

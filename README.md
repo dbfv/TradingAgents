@@ -224,14 +224,9 @@ TradingAgents works with any market Yahoo Finance covers, using the exchange-suf
 - India: `RELIANCE.NS`, `.BO` · Canada: `.TO` · Australia: `.AX`
 - China A-shares: Shanghai `.SS`, Shenzhen `.SZ` (e.g. `600519.SS` for Kweichow Moutai)
 - Crypto: `BTC-USD`, `ETH-USD`
-
-Vietnam is not on this list. Yahoo Finance covers Vietnamese listings under
-the `.VN` suffix (`VIC.VN`, not `VIC`), and a bare ticker returns nothing at
-all — HTTP 404, no time zone — so a Vietnamese symbol currently produces an
-empty price series rather than an error. See
-[`docs/research/yahoo_dnse_benchmark_design.md`](docs/research/yahoo_dnse_benchmark_design.md)
-for what a benchmark of Yahoo Finance against the DNSE OpenAPI measured about
-the `.VN` series, and what it means for using it as a source.
+- Vietnam: `VIC.VN` — served by the [DNSE OpenAPI](#market-data-benchmark-vietnam), with
+  Yahoo Finance as the fallback. A bare `VIC` also resolves: Yahoo answers it with a
+  404, so the request falls through to DNSE.
 
 <p align="center">
   <img src="assets/cli/cli_init.png" width="100%" style="display: inline-block; margin: 0 2%;">
@@ -417,7 +412,7 @@ It is a benchmark, not a vendor switch: it changes no production routing and
 calls only read-only market-data endpoints.
 
 ```console
-pip install -e ".[benchmark]"          # adds the official DNSE SDK
+pip install -e ".[dev]"                # the DNSE SDK is a core dependency
 export DNSE_API_KEY=... DNSE_API_SECRET=...
 python -m tests.market_data_benchmark.run_benchmark
 ```
@@ -426,6 +421,32 @@ The reports land in `artifacts/market_data_benchmark/<run_id>/`. The method,
 the verified DNSE API documentation and the findings are in
 [`docs/research/yahoo_dnse_benchmark_design.md`](docs/research/yahoo_dnse_benchmark_design.md)
 and [`docs/research/dnse_openapi_notes.md`](docs/research/dnse_openapi_notes.md).
+
+### Which vendor serves a Vietnamese listing
+
+The benchmark found that the two sources are not interchangeable over a
+multi-year window, so a **DNSE vendor** now serves the daily bars for a
+Vietnamese listing, and Yahoo serves everything else:
+
+- `VIC.VN` (and a bare `VIC`, which Yahoo answers with a 404) is read from
+  the DNSE OpenAPI: `GET /price/ohlc`, prices in dong, volume in shares.
+- The choice is configuration, not a hidden rule — `market_vendors` in
+  `default_config.py` maps a market's suffix to its vendor chain, and
+  `fallback_vendors` names the vendors tried only after every configured
+  vendor has answered that it has no such symbol.
+- Without `DNSE_API_KEY` / `DNSE_API_SECRET` the DNSE vendor reports that it
+  is not configured and the request falls through to Yahoo.
+
+To check which vendor actually answered, at any time:
+
+```console
+python scripts/verify_dnse_vendor.py --symbol VIC.VN
+```
+
+It instruments both HTTP transports and reports, per stage of the price path
+(the routed tool, the indicator frame, the verified snapshot, the closes the
+memory log settles), which vendor answered and how many requests each host
+received.
 
 ## Contributing
 

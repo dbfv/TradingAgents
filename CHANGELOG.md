@@ -10,11 +10,16 @@ Changes that need action when upgrading are listed under "Upgrading from" in the
 
 ### Added
 
-- **A market-data benchmark for Vietnamese prices.** `tests/market_data_benchmark/` compares Yahoo Finance against the official DNSE OpenAPI for the 30 VN30 constituents over a 12-month window, and reports what the evidence shows: DNSE answered 30/30 tickers and covered 99.9% of the sessions, Yahoo answered 30/30 and covered 98.0%. It is read-only, it changes no production routing, and it installs with `pip install -e ".[benchmark]"`. The method and the findings are in `docs/research/yahoo_dnse_benchmark_design.md`; the verified DNSE API documentation is in `docs/research/dnse_openapi_notes.md`.
+- **A DNSE vendor for Vietnamese daily prices.** A Vietnamese listing (`VIC.VN`, and a bare `VIC`, which Yahoo answers with a 404) is now read from the [DNSE OpenAPI](https://developers.dnse.com.vn/): `GET /price/ohlc`, with prices normalised to dong and volume in shares, which is the source the benchmark in `tests/market_data_benchmark/` found to be the more complete and the more consistent of the two. The choice is configuration — `market_vendors` in `default_config.py` maps a market's suffix to its vendor chain, and `fallback_vendors` names the vendors tried only after every configured vendor has answered that it has no such symbol — so a market that is not covered keeps exactly the chain it had. Without `DNSE_API_KEY` / `DNSE_API_SECRET` the vendor reports that it is not configured and the request falls through to Yahoo. `scripts/verify_dnse_vendor.py` reports which vendor served each stage of the price path.
+- **A market-data benchmark for Vietnamese prices.** `tests/market_data_benchmark/` compares Yahoo Finance against the official DNSE OpenAPI for the 30 VN30 constituents over a 12-month window, and reports what the evidence shows: DNSE answered 30/30 tickers and covered 99.9% of the sessions, Yahoo answered 30/30 and covered 98.0%. It is read-only, it changes no production routing. The method and the findings are in `docs/research/yahoo_dnse_benchmark_design.md`; the verified DNSE API documentation is in `docs/research/dnse_openapi_notes.md`.
 
-### Documentation
+### Fixed
 
-- The README's market list now says that Vietnam is **not** covered: Yahoo lists Vietnamese equities under the `.VN` suffix (`VIC.VN`), and a bare ticker returns nothing — HTTP 404, no time zone — so a Vietnamese symbol produces an empty price series rather than an error.
+- The alpha benchmark of a Vietnamese listing is the VN30 tracking ETF (`E1VFVN30.VN`) rather than the US default, so the reflection layer compares it with its own market.
+
+### Dependencies
+
+- The official DNSE OpenAPI SDK (`dnse-sdk-openapi==2.4.1`) and `msgpack` (which the SDK's WebSocket client imports, and which the package does not declare) are now dependencies.
 
 ## [0.6.0] — 2026-10-03
 

@@ -427,7 +427,74 @@ failing tickers.
   a reduced, credential-free sample is kept under `fixtures/dnse/`.
 - No production routing or vendor configuration is changed by this benchmark.
 
-## 8. Verdict
+## 8. What the benchmark changed afterwards
+
+The benchmark itself changed nothing. Its findings then informed a separate
+change: a **DNSE vendor** that serves the daily bars of a Vietnamese listing.
+
+```
+tradingagents/dataflows/vendors/dnse/
+    __init__.py
+    common.py     # the client, the retry, the error mapping, the symbol rules
+    market.py     # get_DNSE_data_online: the CSV the market analyst reads
+    ohlcv.py      # load_dnse_ohlcv: the frame the indicators are computed from
+
+tradingagents/dataflows/ohlcv.py       # which vendor serves a symbol's prices
+scripts/verify_dnse_vendor.py          # proves which vendor answered
+tests/test_dnse_vendor.py              # unit tests (mocked)
+tests/test_dnse_vendor_integration.py  # against the real API
+```
+
+**How a symbol is routed.** The routing layer picks a vendor per *tool*, but a
+symbol's market decides which vendor can serve it at all: Yahoo has no
+Vietnamese listing under a bare ticker, and the DNSE OpenAPI has no US
+listing. So the chain is resolved per symbol, from configuration:
+
+```python
+"market_vendors": {
+    ".VN": "dnse,yfinance",   # Vietnamese listings: DNSE first, Yahoo after
+},
+"fallback_vendors": {
+    "get_stock_data": "dnse",  # tried only after every configured vendor has
+                               # answered that it has no such symbol
+},
+```
+
+- The market rule is **explicit configuration**, not a hidden re-route, and the
+  configured chain still follows it, so a symbol the rule does not cover keeps
+  exactly the chain it had.
+- The fallback vendors run **only** after every configured vendor has answered
+  "I have no such symbol". That is the case a bare Vietnamese ticker lands in:
+  Yahoo answers a bare `VIC` with a 404, and DNSE lists it.
+- Without `DNSE_API_KEY` / `DNSE_API_SECRET` the DNSE vendor raises
+  `VendorNotConfiguredError`, which the router already treats as "this vendor
+  cannot answer" — the request falls through to Yahoo.
+
+**Every stage of the price path goes through the same source.** The routed
+tool, the indicator frame, the verified market snapshot and the closes the
+memory log settles all read the dispatcher, so the prices the agent is told to
+trust and the prices it is shown cannot come from two different vendors. The
+DNSE CSV also carries a `# Source:` line, so the provenance is visible in the
+data the analyst reads.
+
+**Checking it.** `scripts/verify_dnse_vendor.py` instruments the two HTTP
+transports (the SDK's urllib3 pool and yfinance's curl_cffi session) and
+reports, for each stage, which vendor answered and how many requests each
+host received:
+
+```console
+$ python scripts/verify_dnse_vendor.py --symbol VIC.VN
+stage                              served by  hint              dnse reqs  yahoo reqs
+--------------------------------------------------------------------------------------
+get_stock_data (routed tool)       dnse       dnse                      1           0
+OHLCV frame (indicators)           dnse       dnse                      1           0
+verified market snapshot           dnse       consistent                1           0
+closes (memory-log settlement)     dnse       read                      1           0
+
+VERDICT: the DNSE OpenAPI served every stage.
+```
+
+## 9. Verdict
 
 One of `PASS`, `PASS WITH LIMITATIONS`, `FAIL`, `INCONCLUSIVE`, `BLOCKED`, with
 quantified evidence and sample sizes for every claim, in

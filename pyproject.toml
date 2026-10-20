@@ -9,6 +9,7 @@ description = "TradingAgents: Multi-Agents LLM Financial Trading Framework"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "dnse-sdk-openapi==2.4.1",
     "langchain-core>=1.6.5",
     "langchain-anthropic>=1.7.4",
     "langchain-google-genai>=4.4.0",
@@ -16,6 +17,9 @@ dependencies = [
     "langgraph>=1.2.12",
     "langgraph-checkpoint-sqlite>=3.1.1",
     "markdown-it-py>=4.0",
+    # The official DNSE SDK imports its WebSocket client, which needs msgpack;
+    # the package declares no dependencies of its own, so it is pinned here.
+    "msgpack>=1.1.0",
     "pandas>=3.0.6",
     "python-dotenv>=1.0.0",
     "pytz>=2025.2",
@@ -38,15 +42,6 @@ dev = [
 # stays lean: pip install "tradingagents[bedrock]".
 bedrock = [
     "langchain-aws>=1.7.9",
-]
-# The Yahoo-vs-DNSE VN30 market-data benchmark. Optional: it needs the official
-# DNSE OpenAPI SDK, and nothing in the trading agent itself uses it.
-# `msgpack` is required by the SDK's WebSocket client, which the package's
-# import chain pulls in even for REST-only use; the SDK declares no
-# dependencies of its own.
-benchmark = [
-    "dnse-sdk-openapi==2.4.1",
-    "msgpack>=1.1.0",
 ]
 
 [project.scripts]

@@ -169,6 +169,25 @@ def build_default_config() -> dict:
         "tool_vendors": {
             # Example: "get_stock_data": "alpha_vantage",  # Override category default
         },
+        # Which vendor serves a market, by the symbol's suffix. A symbol's
+        # market decides which vendor can serve it at all: Yahoo Finance has
+        # no Vietnamese listing under a bare ticker, and the DNSE OpenAPI has
+        # no US listing. The rule is explicit here rather than a silent
+        # re-route, and the category chain still follows it, so a symbol the
+        # rule does not cover keeps exactly the chain it had.
+        "market_vendors": {
+            # Vietnamese listings (HOSE, HNX, UPCOM): the exchange's own API
+            # first, Yahoo after it. DNSE needs DNSE_API_KEY / DNSE_API_SECRET;
+            # without them the request falls through to Yahoo, which serves
+            # these under the ".VN" suffix.
+            ".VN": "dnse,yfinance",
+        },
+        # Vendors tried only when every configured vendor has answered that it
+        # has no data for the symbol. This is how a bare Vietnamese ticker
+        # ("VIC", which Yahoo answers with a 404) is served by DNSE.
+        "fallback_vendors": {
+            "get_stock_data": "dnse",
+        },
         # Benchmark for alpha calculation in the reflection layer.
         # ``benchmark_ticker`` (when set) overrides the suffix map for all
         # tickers; leave it None to use ``benchmark_map`` for auto-detection
@@ -200,6 +219,9 @@ def build_default_config() -> dict:
             ".SS":  "000001.SS",   # Shanghai (SSE Composite)
             ".SZ":  "399001.SZ",   # Shenzhen (SZSE Component)
             ".SA":  "^BVSP",       # B3 Brazil (Ibovespa)
+            # Vietnam: the VN30 tracking ETF is the regional benchmark Yahoo
+            # carries (there is no Yahoo index symbol for the VN30 itself).
+            ".VN":  "E1VFVN30.VN",
             "":     "SPY",         # default for US-listed tickers (no suffix)
         },
 
