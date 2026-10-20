@@ -205,12 +205,17 @@ def build_summary(
         lines.append(f"| `{kind}` | {count} |")
     lines.append("")
     lines.append(
-        "`exact` — the same bar in both. `shifted_session` — the volume identifies the bar as "
-        "belonging to the neighbouring session. `shifted_and_scaled_session` — the same, with "
-        "the prices also multiplied by a constant. `scaled_price` — the same session, with the "
-        "prices multiplied by a constant. `merged_sessions` — two sessions' volume in one bar. "
-        "`price_difference` — the volume matches but the prices do not, with no constant "
-        "factor between them."
+        "`exact` — the same bar in both. `scaled_price` — the same session, with the prices "
+        "multiplied by a constant. `rescaled_session` — the same session, with the prices "
+        "*and* the volume multiplied by constants. `shifted_session` — the volume identifies "
+        "the bar as belonging to the neighbouring session. `shifted_and_scaled_session` — the "
+        "same, with the prices also multiplied by a constant. "
+        "`shifted_session_with_different_prices` — the volume identifies the neighbour, but "
+        "the prices differ by more than a constant. `merged_sessions` — two sessions' volume "
+        "in one bar. `price_difference` — the volume matches but the prices do not, with no "
+        "constant factor between them. `volume_difference` — the prices match but the volume "
+        "does not. `other_difference` — none of the above. `missing_in_yahoo` / "
+        "`missing_in_dnse` / `missing_in_both` — one side has no row for that session."
     )
     lines.append("")
     lines.append("Per symbol: `symbol_metrics.csv`. Per month: `agreement_by_month.csv`.")

@@ -703,11 +703,12 @@ def _verdict(
         "count is consistent with the official forward year, but the two sets could not be "
         "compared session by session."
     )
-    if calendar.only_derived and calendar.only_official:
+    overlap = len(set(sessions) & set(calendar.official_sessions))
+    if overlap:
         limitations.append(
-            f"The derived and official calendars overlap on "
-            f"{len(calendar.only_derived)} + {len(calendar.only_official)} sessions that "
-            "differ between them."
+            f"The derived and official calendars overlap on {overlap} session(s), of which "
+            f"{len(calendar.only_derived)} are only in the derived set and "
+            f"{len(calendar.only_official)} only in the official one."
         )
 
     value_metric = next((m for m in metrics if m["field"] == "volume"), None)
