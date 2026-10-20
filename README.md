@@ -225,6 +225,14 @@ TradingAgents works with any market Yahoo Finance covers, using the exchange-suf
 - China A-shares: Shanghai `.SS`, Shenzhen `.SZ` (e.g. `600519.SS` for Kweichow Moutai)
 - Crypto: `BTC-USD`, `ETH-USD`
 
+Vietnam is not on this list. Yahoo Finance covers Vietnamese listings under
+the `.VN` suffix (`VIC.VN`, not `VIC`), and a bare ticker returns nothing at
+all — HTTP 404, no time zone — so a Vietnamese symbol currently produces an
+empty price series rather than an error. See
+[`docs/research/yahoo_dnse_benchmark_design.md`](docs/research/yahoo_dnse_benchmark_design.md)
+for what a benchmark of Yahoo Finance against the DNSE OpenAPI measured about
+the `.VN` series, and what it means for using it as a source.
+
 <p align="center">
   <img src="assets/cli/cli_init.png" width="100%" style="display: inline-block; margin: 0 2%;">
 </p>
@@ -397,6 +405,27 @@ config["temperature"] = 0.0
 What does not vary anymore: the analyzed company identity is resolved deterministically from the ticker before any agent runs, and the market analyst grounds exact price and indicator claims in a verified data snapshot. Earlier reports of "different companies" or fabricated price levels across runs are addressed by these two mechanisms.
 
 Backtest results are not guaranteed to match any published figure. Returns depend on the model, the temperature, the date range, data quality, and the sampling above. Treat the framework as a research scaffold for studying multi-agent analysis, not as a strategy with a fixed, replicable return.
+
+## Market data benchmark (Vietnam)
+
+`tests/market_data_benchmark/` is a reproducible, read-only comparison of
+Yahoo Finance against the [DNSE OpenAPI](https://developers.dnse.com.vn/) for
+the 30 VN30 constituents. It answers, with evidence, how far Yahoo's `.VN`
+series can be trusted for Vietnamese daily prices.
+
+It is a benchmark, not a vendor switch: it changes no production routing and
+calls only read-only market-data endpoints.
+
+```console
+pip install -e ".[benchmark]"          # adds the official DNSE SDK
+export DNSE_API_KEY=... DNSE_API_SECRET=...
+python -m tests.market_data_benchmark.run_benchmark
+```
+
+The reports land in `artifacts/market_data_benchmark/<run_id>/`. The method,
+the verified DNSE API documentation and the findings are in
+[`docs/research/yahoo_dnse_benchmark_design.md`](docs/research/yahoo_dnse_benchmark_design.md)
+and [`docs/research/dnse_openapi_notes.md`](docs/research/dnse_openapi_notes.md).
 
 ## Contributing
 

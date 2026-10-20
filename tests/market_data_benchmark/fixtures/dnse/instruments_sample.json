@@ -1,0 +1,22 @@
+{
+  "_comment": [
+    "A synthetic example of the DNSE /market/instruments response, with the",
+    "indexName filter. The shape is taken from the official OpenAPI",
+    "specification; the entries are the specification's own example values."
+  ],
+  "data": [
+    {
+      "symbol": "ACB",
+      "marketId": "STO",
+      "securityGroupId": "ST",
+      "symbolType": "",
+      "listedDate": "2020-12-09",
+      "shortName": "Ngân hàng Á Châu",
+      "name": "Ngân hàng TMCP Á Châu",
+      "indexName": ["VN100", "VN30"]
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 100
+}

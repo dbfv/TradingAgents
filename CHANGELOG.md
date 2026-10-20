@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Changes that need action when upgrading are listed under "Upgrading from" in their release.
 
+## [Unreleased]
+
+### Added
+
+- **A market-data benchmark for Vietnamese prices.** `tests/market_data_benchmark/` compares Yahoo Finance against the official DNSE OpenAPI for the 30 VN30 constituents over a 12-month window, and reports what the evidence shows: DNSE answered 30/30 tickers and covered 99.9% of the sessions, Yahoo answered 30/30 and covered 98.0%. It is read-only, it changes no production routing, and it installs with `pip install -e ".[benchmark]"`. The method and the findings are in `docs/research/yahoo_dnse_benchmark_design.md`; the verified DNSE API documentation is in `docs/research/dnse_openapi_notes.md`.
+
+### Documentation
+
+- The README's market list now says that Vietnam is **not** covered: Yahoo lists Vietnamese equities under the `.VN` suffix (`VIC.VN`), and a bare ticker returns nothing — HTTP 404, no time zone — so a Vietnamese symbol produces an empty price series rather than an error.
+
 ## [0.6.0] — 2026-10-03
 
 HTML reports, a provider per model tier, past decisions settled for every ticker while the analysts work, and company news read while Yahoo's news feed is down.

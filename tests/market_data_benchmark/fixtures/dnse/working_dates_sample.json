@@ -1,0 +1,15 @@
+{
+  "_comment": [
+    "A synthetic example of the DNSE /market/working-dates response.",
+    "Verified live on 2026-10-20: the endpoint returns one year of dates",
+    "running FORWARD from the current day (258 entries, 2026-10-20 to",
+    "2027-10-20), so it cannot serve as a historical calendar."
+  ],
+  "workingDates": [
+    "2026-10-20",
+    "2026-10-21",
+    "2026-10-22",
+    "2026-10-23",
+    "2026-10-26"
+  ]
+}

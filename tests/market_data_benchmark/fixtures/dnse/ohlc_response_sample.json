@@ -1,0 +1,19 @@
+{
+  "_comment": [
+    "A synthetic example of the DNSE /price/ohlc response, matching the schema",
+    "published in the official OpenAPI specification (spec/dnse-openapi-2026-09-15.yaml).",
+    "The values are the specification's own example, not a recorded provider",
+    "response: DNSE's terms of use have not been checked for permission to",
+    "redistribute raw market data, so the repository keeps the schema and a",
+    "synthetic sample rather than a captured payload.",
+    "The real response shape, and the field-by-field values observed on",
+    "2026-10-20, are documented in docs/research/dnse_openapi_notes.md."
+  ],
+  "t": [1773715500, 1773716400, 1773800100],
+  "o": [23.8, 23.75, 23.75],
+  "h": [23.8, 23.8, 23.9],
+  "l": [23.7, 23.7, 23.7],
+  "c": [23.75, 23.75, 23.8],
+  "v": [2530900, 514100, 494000],
+  "nextTime": 0
+}

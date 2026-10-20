@@ -117,6 +117,21 @@ def _dummy_api_keys(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _no_dnse_credentials(request, monkeypatch):
+    """Unit tests must not reach DNSE with the developer's credentials.
+
+    The market-data benchmark reads DNSE credentials from the environment. A
+    unit test that constructs a provider would otherwise carry the developer's
+    real key. An integration test keeps them, because reaching the API is the
+    point of it.
+    """
+    if request.node.get_closest_marker("integration"):
+        return
+    for env_var in ("DNSE_API_KEY", "DNSE_API_SECRET"):
+        monkeypatch.setenv(env_var, "")
+
+
+@pytest.fixture(autouse=True)
 def _isolate_config():
     """Reset the global dataflows config before and after each test.
 
